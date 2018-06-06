@@ -1,0 +1,124 @@
+---
+kind: Namespace
+apiVersion: v1
+metadata:
+  name: kubeception
+  labels:
+    name: kubeception
+
+
+---
+kind: PersistentVolume
+apiVersion: v1
+metadata:
+  name: etcd-pv-volume
+  labels:
+    type: local
+spec:
+  storageClassName: standard
+  capacity: 
+    storage: 1Gi
+  accessModes:
+    - ReadWriteOnce
+  hostPath:
+    path: "/var/data"
+    type: DirectoryOrCreate
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: etcd-pv-claim
+  namespace: kubeception
+spec:
+  storageClassName: standard
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 500Mi
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubeception-etcd
+  namespace: kubeception
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      role.kubeception: etcd
+  template:
+      metadata:
+        namespace: kubeception
+        name: kubeception-etcd0
+        labels: 
+          component: etcd
+          tier: control-plane
+          role.kubeception: etcd
+      spec:
+        containers:
+          - name: kubeception-etcd
+            image: k8s.gcr.io/etcd-amd64:3.1.10
+            command: 
+              - etcd
+              - --name=etcd0
+              - --data-dir=/var/lib/etcd
+            volumeMounts:
+              - mountPath: /var/lib/etcd/
+                name: etcd-pv-claim
+              - mountPath: /opt/etcd/scripts
+                name: etcd-util-scripts
+            ports: 
+            - name: clientport
+              containerPort: 2379
+              protocol: TCP
+            - name: serviceport
+              containerPort: 4001
+              protocol: TCP
+            livenessProbe:
+              # httpGet:
+              #   host: 127.0.0.1
+              #   path: /health
+              #   port: 2379
+              #   scheme: HTTP
+              exec:
+                command: ['sh', '/opt/etcd/scripts/localhealth.sh']
+              initialDelaySeconds: 15
+              timeoutSeconds: 15
+        volumes:
+          - name: etcd-pv-claim
+            persistentVolumeClaim:
+              claimName: etcd-pv-claim
+          - name: etcd-util-scripts
+            configMap:
+              name: etcd-util-scripts
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: kubeception-etcd
+  namespace: kubeception
+spec:
+  selector:
+    role.kubeception: etcd
+  ports:
+  - protocol: TCP
+    port: 4001
+    targetPort: 4001
+
+---
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  namespace: kubeception
+  name: etcd-util-scripts
+data:
+  localhealth.sh: |
+    #!/bin/sh
+    etcdctl cluster-health | grep healthy
+
+
+  
