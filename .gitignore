@@ -1,0 +1,5 @@
+certs/*.crt
+certs/*.csr
+certs/*.key
+certs/private/*
+certs/cluster.*.conf
