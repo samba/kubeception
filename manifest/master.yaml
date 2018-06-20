@@ -35,7 +35,7 @@ spec:
             command: 
               - '/hyperkube'
               - 'kube-apiserver'
-              - '--v=6'
+              - '--v=2'
               - '--allow-privileged=false'
               - '--etcd-servers=https://$(ETCD_SERVER):$(ETCD_PORT)'
               - '--bind-address=0.0.0.0'
