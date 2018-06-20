@@ -63,13 +63,31 @@ spec:
             image: k8s.gcr.io/etcd-amd64:3.1.10
             command: 
               - etcd
+              - --debug
               - --name=etcd0
               - --data-dir=/var/lib/etcd
+              - --client-cert-auth
+              - --cert-file=/opt/etcd/certs/server/tls.crt
+              - --key-file=/opt/etcd/certs/server/tls.key
+              - --trusted-ca-file=/opt/kubernetes/certs/ca/tls.crt
+              - --listen-client-urls=https://0.0.0.0:2379
+              - --advertise-client-urls=https://$(SERVICE_NAME):2379
+            env:
+              - name: ETCD_DEBUG
+                value: "1"
+              - name: SERVICE_NAME
+                value: kubeception-etcd
             volumeMounts:
               - mountPath: /var/lib/etcd/
                 name: etcd-pv-claim
               - mountPath: /opt/etcd/scripts
                 name: etcd-util-scripts
+              - mountPath: /opt/etcd/certs/client
+                name: etcd-client-certs
+              - mountPath: /opt/etcd/certs/server
+                name: etcd-server-certs
+              - mountPath: /opt/kubernetes/certs/ca
+                name: certauth-certs
             ports: 
             - name: clientport
               containerPort: 2379
@@ -78,11 +96,6 @@ spec:
               containerPort: 4001
               protocol: TCP
             livenessProbe:
-              # httpGet:
-              #   host: 127.0.0.1
-              #   path: /health
-              #   port: 2379
-              #   scheme: HTTP
               exec:
                 command: ['sh', '/opt/etcd/scripts/localhealth.sh']
               initialDelaySeconds: 15
@@ -94,6 +107,15 @@ spec:
           - name: etcd-util-scripts
             configMap:
               name: etcd-util-scripts
+          - name: etcd-client-certs
+            secret:
+              secretName: client.etcd.kubeception
+          - name: etcd-server-certs
+            secret:
+              secretName: server.etcd.kubeception
+          - name: certauth-certs
+            secret:
+              secretName: ca.kubeception
 
 ---
 kind: Service
@@ -106,8 +128,8 @@ spec:
     role.kubeception: etcd
   ports:
   - protocol: TCP
-    port: 4001
-    targetPort: 4001
+    port: 2379
+    targetPort: 2379
 
 ---
 kind: ConfigMap

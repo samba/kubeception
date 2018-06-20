@@ -15,6 +15,7 @@ sed \
     -e "s@<MASTER_IP>@${MASTER_IP}@" \
     -e "s@<MASTER_CLUSTER_IP>@${MASTER_CLUSTER_IP}@" \
     -e "s@<CLUSTER_NAME>@${CLUSTER_NAME:-clustername}@" \
+    -e "s@<ETCD_SERVICE>@${ETCD_SERVICE:-etcdservice}@" \
     "$@"
 
 

@@ -8,5 +8,6 @@ This is a concept-proving codebase. Code quality and architectural concerns will
 
 ## Known Issues
 
-- Nothing is highly available.
-- Nothing is secure.
+Nothing is highly available. Nothing is secure.
+
+- [ ] Certificates: CA _key_ should **not** be stored in k8s.

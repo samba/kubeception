@@ -1,0 +1,104 @@
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubeception-apiserver
+  namespace: kubeception
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      role.kubeception: apiserver
+  template:
+      metadata:
+        namespace: kubeception
+        name: kubeception-apiserver
+        labels: 
+          role.kubeception: apiserver
+          tier: control-plane
+          component: api-server
+      spec:
+        containers:
+          - name: debug
+            image: alpine:latest
+            command: ['sh', '-c', 'tail -f /dev/null']
+            volumeMounts:
+              - mountPath: /opt/etcd/certs/client
+                name: etcd-client-certs
+              - mountPath: /opt/kubernetes/certs/apiserver
+                name: apiserver-certs
+              - mountPath: /opt/kubernetes/certs/ca
+                name: certauth-certs
+
+          - name: hyperkube-apiserver
+            image: k8s.gcr.io/hyperkube:v1.10.4
+            command: 
+              - '/hyperkube'
+              - 'kube-apiserver'
+              - '--v=6'
+              - '--allow-privileged=false'
+              - '--etcd-servers=https://$(ETCD_SERVER):$(ETCD_PORT)'
+              - '--bind-address=0.0.0.0'
+              - '--anonymous-auth=false'
+              - '--authorization-mode=RBAC'
+              - '--secure-port=6443'
+              - '--insecure-port=8080'  # kept for testing, temporarily.
+              - '--runtime-config=api/all=true,batch/v2alpha1=true,rbac.authorization.k8s.io/v1alpha1=true'
+              - '--service-cluster-ip-range=10.0.0.0/24'
+              - '--etcd-cafile=/opt/kubernetes/certs/ca/tls.crt'
+              - '--etcd-certfile=/opt/etcd/certs/client/tls.crt'
+              - '--etcd-keyfile=/opt/etcd/certs/client/tls.key'
+              - '--tls-cert-file=/opt/kubernetes/certs/apiserver/tls.crt'
+              - '--tls-private-key-file=/opt/kubernetes/certs/apiserver/tls.key'
+              - '--tls-ca-file=/opt/kubernetes/certs/ca/tls.crt'
+              - '--kubelet-certificate-authority=/opt/kubernetes/certs/ca/tls.crt'
+            ports:
+              - name: https
+                containerPort: 6443
+              - name: http
+                containerPort: 8080
+            env:
+              - name: ETCD_SERVER
+                value: kubeception-etcd
+              - name: ETCD_PORT
+                value: '2379'
+            volumeMounts:
+              - mountPath: /opt/etcd/certs/client
+                name: etcd-client-certs
+              - mountPath: /opt/kubernetes/certs/apiserver
+                name: apiserver-certs
+              - mountPath: /opt/kubernetes/certs/ca
+                name: certauth-certs
+        volumes:
+        - name: etcd-server-certs
+          secret:
+            secretName: server.etcd.kubeception
+        - name: etcd-client-certs
+          secret:
+            secretName: client.etcd.kubeception
+        - name: apiserver-certs
+          secret:
+            secretName: apiserver.kubeception
+        - name: certauth-certs
+          secret:
+            secretName: ca.kubeception
+              
+
+---
+
+kind: Service
+apiVersion: v1
+metadata:
+  name:  kubeception-apiserver
+  namespace: kubeception
+spec:
+  selector:
+    role.kubeception:  apiserver
+  type: ClusterIP  # TODO: eventually this will be exposed for customer.
+  ports:
+  - name:  https
+    port:  443
+    targetPort:  https
+
+---
+# TODO: kubelet, kube-scheduler, kube-controller-manager, kube-proxy
