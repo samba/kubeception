@@ -29,13 +29,15 @@ spec:
                 name: apiserver-certs
               - mountPath: /opt/kubernetes/certs/ca
                 name: certauth-certs
+              - mountPath: /opt/kubernetes/tokens
+                name: tokenauth-tokens
 
           - name: hyperkube-apiserver
             image: k8s.gcr.io/hyperkube:v1.10.4
             command: 
               - '/hyperkube'
               - 'kube-apiserver'
-              - '--v=2'
+              - '--v=1'
               - '--allow-privileged=false'
               - '--etcd-servers=https://$(ETCD_SERVER):$(ETCD_PORT)'
               - '--bind-address=0.0.0.0'
@@ -52,6 +54,8 @@ spec:
               - '--tls-private-key-file=/opt/kubernetes/certs/apiserver/tls.key'
               - '--tls-ca-file=/opt/kubernetes/certs/ca/tls.crt'
               - '--kubelet-certificate-authority=/opt/kubernetes/certs/ca/tls.crt'
+              - '--client-ca-file=/opt/kubernetes/certs/ca/tls.crt'
+              - '--token-auth-file=/opt/kubernetes/tokens/tokens.csv'
             ports:
               - name: https
                 containerPort: 6443
@@ -69,6 +73,8 @@ spec:
                 name: apiserver-certs
               - mountPath: /opt/kubernetes/certs/ca
                 name: certauth-certs
+              - mountPath: /opt/kubernetes/tokens
+                name: tokenauth-tokens
         volumes:
         - name: etcd-server-certs
           secret:
@@ -82,6 +88,9 @@ spec:
         - name: certauth-certs
           secret:
             secretName: ca.kubeception
+        - name: tokenauth-tokens
+          secret:
+            secretName: tokens.kubeception
               
 
 ---

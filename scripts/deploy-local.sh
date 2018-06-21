@@ -23,6 +23,9 @@ while read fbase secretname; do
   kubectl create --namespace "kubeception" secret tls $secretname --cert=certs/${fbase}.crt --key=certs/${fbase}.key 
 done < <(certs)
 
+kubectl delete --namespace "kubeception" secret tokens.kubeception || true
+kubectl create --namespace "kubeception" secret generic tokens.kubeception \
+  --from-file=tokens.csv=certs/apiserver_tokens.csv
 
 # Install all manifest components (command line arguments).
 for f_yaml; do
