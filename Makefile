@@ -16,7 +16,7 @@ export CLUSTER_NAME MASTER_IP MASTER_CLUSTER_IP
 
 up:
 	minikube status | grep -i stopped || exit 0
-	minikube start
+	minikube start --cpus 4
 
 down:
 	minikube stop	
