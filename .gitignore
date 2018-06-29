@@ -3,3 +3,7 @@ certs/*.csr
 certs/*.key
 certs/private/*
 certs/cluster.*.conf
+*.kubeconfig
+.tmp/
+certs/*token*
+certs/ca.*
