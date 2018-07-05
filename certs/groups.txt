@@ -1,0 +1,6 @@
+# This is a simplistic flatfile.
+# <username>: <groups, comma-separated>
+admin: system:masters
+kubelet: system:nodes
+
+

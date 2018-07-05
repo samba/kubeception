@@ -25,11 +25,21 @@ Hyperkube args/opts help
 
 ## Reference Material
 
-https://kubernetes.io/docs/setup/scratch/
-https://kubernetes.io/docs/setup/scratch/#bootstrapping-the-cluster
-https://kubernetes.io/docs/setup/scratch/#apiserver-controller-manager-and-scheduler
 
+
+
+https://github.com/coreos/coreos-kubernetes/blob/master/Documentation/openssl.md
+https://github.com/mesosphere/kubernetes-keygen
+https://github.com/mesosphere/kubernetes-keygen/blob/master/kube-certgen.sh
+https://github.com/Microsoft/SDN/blob/master/Kubernetes/linux/certs/generate-certs.sh
+https://kubernetes.io/docs/concepts/cluster-administration/certificates/#openssl
 https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file
 https://kubernetes.io/docs/reference/access-authn-authz/rbac/
-https://kubernetes.io/docs/concepts/cluster-administration/certificates/#openssl
-
+https://kubernetes.io/docs/setup/scratch/
+https://kubernetes.io/docs/setup/scratch/#apiserver-controller-manager-and-scheduler
+https://kubernetes.io/docs/setup/scratch/#bootstrapping-the-cluster
+https://security.stackexchange.com/questions/74345/provide-subjectaltname-to-openssl-directly-on-command-line
+https://serverfault.com/questions/899353/how-to-inherit-the-commonname-to-the-subject-alternative-name
+https://www.endpoint.com/blog/2013/10/29/ssl-certificate-sans-and-multi-level
+https://www.endpoint.com/blog/2014/10/30/openssl-csr-with-alternative-names-one
+https://www.openssl.org/docs/manmaster/man5/config.html
