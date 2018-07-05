@@ -22,15 +22,6 @@ spec:
           - name: debug
             image: alpine:latest
             command: ['sh', '-c', 'tail -f /dev/null']
-            volumeMounts:
-              - mountPath: /opt/etcd/certs/client
-                name: etcd-client-certs
-              - mountPath: /opt/kubernetes/certs/apiserver
-                name: apiserver-certs
-              - mountPath: /opt/kubernetes/certs/ca
-                name: certauth-certs
-              - mountPath: /opt/kubernetes/tokens
-                name: tokenauth-tokens
 
           - name: hyperkube-apiserver
             image: k8s.gcr.io/hyperkube:v1.10.4
@@ -47,15 +38,15 @@ spec:
               - '--insecure-port=8080'  # kept for testing, temporarily.
               - '--runtime-config=api/all=true,batch/v2alpha1=true,rbac.authorization.k8s.io/v1alpha1=true'
               - '--service-cluster-ip-range=10.0.0.0/24'
-              - '--etcd-cafile=/opt/kubernetes/certs/ca/tls.crt'
-              - '--etcd-certfile=/opt/etcd/certs/client/tls.crt'
-              - '--etcd-keyfile=/opt/etcd/certs/client/tls.key'
-              - '--tls-cert-file=/opt/kubernetes/certs/apiserver/tls.crt'
-              - '--tls-private-key-file=/opt/kubernetes/certs/apiserver/tls.key'
-              - '--tls-ca-file=/opt/kubernetes/certs/ca/tls.crt'
-              - '--kubelet-certificate-authority=/opt/kubernetes/certs/ca/tls.crt'
-              - '--client-ca-file=/opt/kubernetes/certs/ca/tls.crt'
-              - '--token-auth-file=/opt/kubernetes/tokens/tokens.csv'
+              - '--etcd-cafile=/opt/kubernetes/certs/apiserver/ca.crt'
+              - '--etcd-certfile=/opt/kubernetes/certs/apiserver/etcd.crt'
+              - '--etcd-keyfile=/opt/kubernetes/certs/apiserver/etcd.key'
+              - '--tls-cert-file=/opt/kubernetes/certs/apiserver/api.crt'
+              - '--tls-private-key-file=/opt/kubernetes/certs/apiserver/api.key'
+              - '--tls-ca-file=/opt/kubernetes/certs/apiserver/ca.crt'
+              - '--kubelet-certificate-authority=/opt/kubernetes/certs/apiserver/ca.crt'
+              - '--client-ca-file=/opt/kubernetes/certs/apiserver/ca.crt'
+              - '--token-auth-file=/opt/kubernetes/certs/apiserver/tokens.csv'
             ports:
               - name: https
                 containerPort: 6443
@@ -67,31 +58,12 @@ spec:
               - name: ETCD_PORT
                 value: '2379'
             volumeMounts:
-              - mountPath: /opt/etcd/certs/client
-                name: etcd-client-certs
               - mountPath: /opt/kubernetes/certs/apiserver
-                name: apiserver-certs
-              - mountPath: /opt/kubernetes/certs/ca
-                name: certauth-certs
-              - mountPath: /opt/kubernetes/tokens
-                name: tokenauth-tokens
+                name: apiserver-secrets
         volumes:
-        - name: etcd-server-certs
-          secret:
-            secretName: server.etcd.kubeception
-        - name: etcd-client-certs
-          secret:
-            secretName: client.etcd.kubeception
-        - name: apiserver-certs
+        - name: apiserver-secrets
           secret:
             secretName: apiserver.kubeception
-        - name: certauth-certs
-          secret:
-            secretName: ca.kubeception
-        - name: tokenauth-tokens
-          secret:
-            secretName: tokens.kubeception
-              
 
 ---
 

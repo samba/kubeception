@@ -51,12 +51,14 @@ down:
 
 
 $(DEPLOYMENT_YAML): $(SOURCE_YAML)
-	mkdir -p $(@D)
-	cat $< > $@
+	mkdir -p $(@D)  # make temp dir
+	cat $^ > $@
 
-.tmp/deployment.ts:  $(DEPLOYMENT_YAML) kubeception.kubeconfig | certs
-	bash scripts/deploy-local.sh $<
-	touch $@
+.tmp/deployment.ts:  $(DEPLOYMENT_YAML) kubeception.kubeconfig | host-secrets
+	# Fail if not running in minikube
+	kubectl config current-context | grep -q minikube || exit 1
+	kubectl apply -f $<
+	touch -r $< $@
 
 deploy:  .tmp/deployment.ts 
 
@@ -112,10 +114,10 @@ certs/%.key:
 	openssl genrsa -out $@ 2048
 
 certs/user.%.groups: certs/groups.txt
-	grep '^$*:' $< | cut -d '#' -f 2- | tr -d ' ' > $@
+	grep '^$*:' $< | cut -d ':' -f 2- | tr -d ' ' > $@
 
 
-certs/system.%.csr: certs/%.key $(CERT_CONFIG)
+certs/system.%.csr: certs/system.%.key $(CERT_CONFIG)
 	# @cat -n "$(CERT_CONFIG)"; echo; sync
 	openssl req -new -key $< -out $@ -subj "/CN=$*"
 
@@ -137,11 +139,43 @@ cert-cleanup:
 	rm -rvf $(CERT_CONFIG)
 	rm -rvf certs/*.csv
 	rm -rvf certs/*.token
+	rm -rvf certs/*.groups
 
+
+# In the host cluster, generate secrets for the various components.
+host-secrets: host-secrets-cleanup | certs
+	kubectl create namespace $(CLUSTER_NAME) || true
+	kubectl create secret --namespace $(CLUSTER_NAME) generic certauth.kubeception \
+		--from-file=ca.crt=certs/ca.crt
+	# keys/etc needed for the etcd server
+	kubectl create secret --namespace $(CLUSTER_NAME) generic etcdserver.kubeception \
+		--from-file=ca.crt=certs/ca.crt \
+		--from-file=server.key=certs/system.etcdserver.key \
+		--from-file=server.crt=certs/system.etcdserver.crt
+	# keys/etc needed for the API server (an etcd client)
+	kubectl create secret --namespace $(CLUSTER_NAME) generic apiserver.kubeception \
+		--from-file=ca.crt=certs/ca.crt \
+		--from-file=etcd.crt=certs/system.etcdclient.crt \
+		--from-file=etcd.key=certs/system.etcdclient.key \
+		--from-file=api.crt=certs/system.apiserver.crt \
+		--from-file=api.key=certs/system.apiserver.key \
+		--from-file=tokens.csv=certs/apiserver_tokens.csv
+	# keys/etc needed for kubelet, an API server client
+	kubectl create secret --namespace $(CLUSTER_NAME) generic kubelet.kubeception \
+		--from-file=ca.crt=certs/ca.crt \
+		--from-file=api.crt=certs/system.apiserver.crt \
+		--from-file=kubelet.crt=certs/user.kubelet.crt \
+		--from-file=kubelet.key=certs/user.kubelet.key
+	
+
+host-secrets-cleanup:
+	for i in etcdserver.kubeception apiserver.kubeception kubelet.kubeception certauth.kubeception; do \
+		kubectl delete --namespace $(CLUSTER_NAME) secret $$i || true; \
+		done
 
 # Remove the deployments of the interior cluster.
 deployment-cleanup:
-	kubectl config current-context | grep kubeception && \
+	kubectl config current-context | grep minikube && \
 		kubectl get deployment -n kubeception --no-headers -o name \
 	 	| cut -d '/' -f 2 \
 		| xargs -n 1 kubectl delete deployment -n kubeception || exit 0
@@ -159,8 +193,8 @@ kubeception.kubeconfig: template/kubeconfig $(AUTH_TOKEN) | certs Makefile
 		--embed-certs=true \
 		--kubeconfig=$@
 	kubectl config set-credentials kubeception_admin \
-		--client-certificate=certs/client.crt \
-		--client-key=certs/client.key \
+		--client-certificate=certs/user.admin.crt \
+		--client-key=certs/user.admin.key \
 		--token="$(shell cat $(AUTH_TOKEN))" \
 		--embed-certs=true \
 		--kubeconfig=$@
@@ -169,5 +203,6 @@ kubeception.kubeconfig: template/kubeconfig $(AUTH_TOKEN) | certs Makefile
 		--cluster=kubeception \
 		--kubeconfig=$@
 	kubectl config use-context kubeception --kubeconfig=$@
+	@echo "> TO USE INNER CLUSTER: export KUBECONFIG=$(PWD)/$@"
 
 clean: cert-cleanup deployment-cleanup
