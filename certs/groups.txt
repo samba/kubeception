@@ -2,5 +2,7 @@
 # <username>: <groups, comma-separated>
 admin: system:masters
 kubelet: system:nodes
-
-
+scheduler: system:kube-scheduler
+controller: system:kube-controller-manager
+proxy: system:node-proxier
+volume: system:volume-scheduler

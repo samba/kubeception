@@ -54,13 +54,11 @@ $(DEPLOYMENT_YAML): $(SOURCE_YAML)
 	mkdir -p $(@D)  # make temp dir
 	cat $^ > $@
 
-.tmp/deployment.ts:  $(DEPLOYMENT_YAML) kubeception.kubeconfig | host-secrets
+deploy:  $(DEPLOYMENT_YAML) kubeception.kubeconfig | host-secrets
 	# Fail if not running in minikube
 	kubectl config current-context | grep -q minikube || exit 1
 	kubectl apply -f $<
-	touch -r $< $@
 
-deploy:  .tmp/deployment.ts 
 
 test: deploy
 	echo "TODO: test the deployment."
@@ -141,9 +139,30 @@ cert-cleanup:
 	rm -rvf certs/*.token
 	rm -rvf certs/*.groups
 
+# Prepare a kubeconfig for internal system components, e.g. scheduler
+certs/system.%.kubeconfig: template/kubeconfig certs/ca.crt certs/user.%.crt
+	cp -v $< $@
+	kubectl config set-cluster kubeception \
+		--server="https://kubernetes-kubeception:443" \
+		--certificate-authority=certs/ca.crt \
+		--embed-certs=true \
+		--kubeconfig=$@
+	kubectl config set-credentials system_component \
+		--client-certificate=certs/user.$*.crt \
+		--client-key=certs/user.$*.key \
+		--embed-certs=true \
+		--kubeconfig=$@
+	kubectl config set-context kubeception \
+		--user=system_component \
+		--cluster=kubeception \
+		--kubeconfig=$@
+	kubectl config use-context kubeception --kubeconfig=$@
+
+
+COMPONENTS := $(shell echo certs/system.{scheduler,controller,proxy,volume,kubelet}.kubeconfig)
 
 # In the host cluster, generate secrets for the various components.
-host-secrets: host-secrets-cleanup | certs
+host-secrets: host-secrets-cleanup $(COMPONENTS) | certs
 	kubectl create namespace $(CLUSTER_NAME) || true
 	kubectl create secret --namespace $(CLUSTER_NAME) generic certauth.kubeception \
 		--from-file=ca.crt=certs/ca.crt
@@ -166,11 +185,14 @@ host-secrets: host-secrets-cleanup | certs
 		--from-file=api.crt=certs/system.apiserver.crt \
 		--from-file=kubelet.crt=certs/user.kubelet.crt \
 		--from-file=kubelet.key=certs/user.kubelet.key
+	# kubeconfig bits for various components
+	kubectl create secret --namespace $(CLUSTER_NAME) generic system.kubeconfig.kubeception \
+		$(foreach k, $(COMPONENTS), --from-file=$(notdir $(k))=$(k))
 	
 
 host-secrets-cleanup:
-	for i in etcdserver.kubeception apiserver.kubeception kubelet.kubeception certauth.kubeception; do \
-		kubectl delete --namespace $(CLUSTER_NAME) secret $$i || true; \
+	for i in etcdserver apiserver kubelet certauth system.kubeconfig; do \
+		kubectl delete --namespace $(CLUSTER_NAME) secret "$$i.kubeception" || true; \
 		done
 
 # Remove the deployments of the interior cluster.
@@ -180,9 +202,10 @@ deployment-cleanup:
 	 	| cut -d '/' -f 2 \
 		| xargs -n 1 kubectl delete deployment -n kubeception || exit 0
 
+
 # A local port forward into the inner cluster's API server
 kubeception-portforward:
-	kubectl port-forward -n kubeception svc/kubeception-apiserver 8443:443
+	kubectl port-forward -n kubeception svc/kubernetes 8443:443
 
 # A local kubeconfig to reach the inner cluster
 kubeception.kubeconfig: template/kubeconfig $(AUTH_TOKEN) | certs Makefile

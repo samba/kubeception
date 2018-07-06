@@ -24,7 +24,7 @@ spec:
             command: ['sh', '-c', 'tail -f /dev/null']
 
           - name: hyperkube-apiserver
-            image: k8s.gcr.io/hyperkube:v1.10.4
+            image: k8s.gcr.io/hyperkube:v1.11.0
             command: 
               - '/hyperkube'
               - 'kube-apiserver'
@@ -37,13 +37,12 @@ spec:
               - '--secure-port=6443'
               - '--insecure-port=8080'  # kept for testing, temporarily.
               - '--runtime-config=api/all=true,batch/v2alpha1=true,rbac.authorization.k8s.io/v1alpha1=true'
-              - '--service-cluster-ip-range=10.0.0.0/24'
+              - '--service-cluster-ip-range=10.150.0.0/16'
               - '--etcd-cafile=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--etcd-certfile=/opt/kubernetes/certs/apiserver/etcd.crt'
               - '--etcd-keyfile=/opt/kubernetes/certs/apiserver/etcd.key'
               - '--tls-cert-file=/opt/kubernetes/certs/apiserver/api.crt'
               - '--tls-private-key-file=/opt/kubernetes/certs/apiserver/api.key'
-              - '--tls-ca-file=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--kubelet-certificate-authority=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--client-ca-file=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--token-auth-file=/opt/kubernetes/certs/apiserver/tokens.csv'
@@ -66,11 +65,94 @@ spec:
             secretName: apiserver.kubeception
 
 ---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubeception-scheduler
+  namespace: kubeception
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      role.kubeception: scheduler
+  template:
+      metadata:
+        namespace: kubeception
+        name: kubeception-scheduler
+        labels: 
+          role.kubeception: scheduler
+          tier: control-plane
+          component: scheduler
+      spec:
+        containers:
+          - name: hyperkube-scheduler
+            image: k8s.gcr.io/hyperkube:v1.11.0
+            command:  # XXX arguments are deprecated. TODO provide config file.
+              - '/hyperkube'
+              - 'kube-scheduler'
+              - '--kubeconfig=/opt/kubernetes/certs/system.scheduler.kubeconfig'
+              - '--leader-elect=false'
+              - '--master=$(API_SERVER)'
+              - '--v=2'
+            volumeMounts:
+              - mountPath: /opt/kubernetes/certs
+                name: kubeconfig
+            env:
+              - name: API_SERVER
+                value: https://kubernetes-kubeception:443/
+        volumes:
+        - name: kubeconfig
+          secret:
+            secretName: system.kubeconfig.kubeception
+
+
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubeception-controller-manager
+  namespace: kubeception
+spec:
+  replicas: 1
+  selector: 
+    matchLabels:
+      role.kubeception: controller-manager
+  template:
+      metadata:
+        namespace: kubeception
+        name: kubeception-controller-manager
+        labels: 
+          role.kubeception: controller-manager
+          tier: control-plane
+          component: controller-manager
+      spec:
+        containers:
+          - name: hyperkube-controller-manager
+            image: k8s.gcr.io/hyperkube:v1.11.0
+            command:
+              - '/hyperkube'
+              - 'kube-controller-manager'
+              - '--kubeconfig=/opt/kubernetes/certs/system.controller.kubeconfig'
+              - '--leader-elect=false'
+              - '--master=$(API_SERVER)'
+              - '--v=2'
+            volumeMounts:
+              - mountPath: /opt/kubernetes/certs
+                name: kubeconfig
+            env:
+              - name: API_SERVER
+                value: https://kubernetes-kubeception:443/
+        volumes:
+        - name: kubeconfig
+          secret:
+            secretName: system.kubeconfig.kubeception
+
+---
 
 kind: Service
 apiVersion: v1
 metadata:
-  name:  kubeception-apiserver
+  name:  kubernetes-kubeception
   namespace: kubeception
 spec:
   selector:
@@ -82,4 +164,4 @@ spec:
     targetPort:  https
 
 ---
-# TODO: kubelet, kube-scheduler, kube-controller-manager, kube-proxy
+# TODO:  kube-proxy

@@ -27,7 +27,7 @@ Hyperkube args/opts help
 
 
 
-
+### Certificate managment
 https://github.com/coreos/coreos-kubernetes/blob/master/Documentation/openssl.md
 https://github.com/mesosphere/kubernetes-keygen
 https://github.com/mesosphere/kubernetes-keygen/blob/master/kube-certgen.sh
@@ -43,3 +43,7 @@ https://serverfault.com/questions/899353/how-to-inherit-the-commonname-to-the-su
 https://www.endpoint.com/blog/2013/10/29/ssl-certificate-sans-and-multi-level
 https://www.endpoint.com/blog/2014/10/30/openssl-csr-with-alternative-names-one
 https://www.openssl.org/docs/manmaster/man5/config.html
+
+
+### Cluster setup
+https://www.ibm.com/support/knowledgecenter/en/SSMNED_5.0.0/com.ibm.apic.install.doc/tapic_install_Kubernetes.html
