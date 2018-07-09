@@ -1,0 +1,76 @@
+# TODO: deploy an isolated docker daemon with each kubelet
+---
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kubeception-kubelet
+  namespace: kubeception
+spec:
+  replicas: 2
+  selector: 
+    matchLabels:
+      role.kubeception: kubelet
+  template:
+      metadata:
+        namespace: kubeception
+        name: kubeception-kubelet
+        labels: 
+          role.kubeception: kubelet
+          tier: worker-plane
+          component: kubelet
+      spec:
+        containers:
+          - name: hyperkube-kubelet
+            image: k8s.gcr.io/hyperkube:v1.11.0
+            command:
+              - '/hyperkube'
+              - 'kubelet'
+              - '--allow-privileged=false'  # don't allow the guest to run privileged.
+              - '--fail-swap-on=false'  # XXX for local testing only
+              - '--kubeconfig=/opt/kubernetes/certs/kubelet.kubeconfig'
+              - '--docker-endpoint=$(DOCKER_HOST)'
+              - '--v=2'
+            securityContext:
+              privileged: true  # required for kubelet to expored shared mounts
+            ports:
+              - name: https
+                containerPort: 10250
+              - name: healthz
+                containerPort: 10248
+              - name: readonly
+                containerPort: 10255
+            volumeMounts:
+              - mountPath: /opt/kubernetes/certs
+                name: kubeconfig
+            env:
+              - name: API_SERVER
+                value: https://kubernetes-kubeception:443/
+              - name: DOCKER_HOST
+                value: tcp://localhost:2375
+          - name: kubeception-docker-daemon
+            image: docker:1.12.6-dind
+            resources:
+              requests:
+                cpu: 20m
+                memory: 512Mi
+            securityContext:
+              privileged: true
+            volumeMounts:
+              - name: docker-storage
+                mountPath: /var/lib/docker
+          - name: kubeception-docker-service
+            image: docker:1.12.6
+            command: ['docker', 'run', '-p', '80:80', 'httpd:latest']
+            resources:
+              requests:
+                cpu: 10m
+                memory: 512Mi
+            env:
+              - name: DOCKER_HOST
+                value: tcp://localhost:2375
+        volumes:
+        - name: kubeconfig
+          secret:
+            secretName: kubelet.kubeception
+        - name: docker-storage
+          emptyDir: {}

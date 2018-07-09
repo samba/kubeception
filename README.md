@@ -1,8 +1,11 @@
 # Kubernetes in Kubernetes
 
-This is a concept-proving codebase. Code quality and architectural concerns will be improved with time.
+This is a concept-proving codebase, a very early prototype. 
+Code quality and architectural concerns will be improved with time.
 
-**Be warned**, this codebase currently incorporates lots of hacks.
+**Be warned**, this codebase currently incorporates lots of hacks, and several known but unresolved issues.
+
+
 
 # Usage
 
@@ -31,4 +34,8 @@ make down # destroys minikube cluster
 
 Nothing is highly available. Nothing is secure.
 
-- [ ] Certificates: CA _key_ should **not** be stored in k8s.
+- [x] ~Certificates: CA _key_ should **not** be stored in k8s.~
+- [x] ~kubelet pods don't register as nodes~
+- [ ] Deployments can't schedule pods...
+- [ ] Possible `ClusterRoleBinding` issues preventing sufficient privileges for controller-manager (etc)
+

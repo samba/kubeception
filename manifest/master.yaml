@@ -1,3 +1,9 @@
+# TODO: Apply NetworkPolicy to prevent the inner cluster from accessing the 
+#   host control plane.
+#  https://kubernetes.io/docs/concepts/services-networking/network-policies/
+# 
+# TODO: Deploy kube-proxy in the APi server's pod, with calico or similar to
+#   completely isolate the inner cluster's network.
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -28,7 +34,7 @@ spec:
             command: 
               - '/hyperkube'
               - 'kube-apiserver'
-              - '--v=1'
+              - '--v=2'
               - '--allow-privileged=false'
               - '--etcd-servers=https://$(ETCD_SERVER):$(ETCD_PORT)'
               - '--bind-address=0.0.0.0'
@@ -164,4 +170,3 @@ spec:
     targetPort:  https
 
 ---
-# TODO:  kube-proxy

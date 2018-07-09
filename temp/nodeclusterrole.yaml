@@ -1,0 +1,128 @@
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+    # This restores a `system:node` group binding, consistent with 1.7, which
+    # allows suitably signed certificates (CN=<username>, O=system:node) to 
+    # govern node participation. This is required for Kubelet to register.
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  labels:
+    "kubernetes.io/bootstrapping": "rbac-defaults"
+  name: system:node
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:node
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:node
+
+---
+# Register the `system:kube-scheduler` group binding
+# This allows the certificate to derive permissions (CN=?, O=system:kube-scheduler).
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-scheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-scheduler
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:kube-scheduler
+
+---
+# Evidently the scheduler needs storage governance.
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-scheduler-storage
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:volume-scheduler
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:kube-scheduler
+
+
+---
+# Register the `system:kube-controller-manager` group binding
+# This allows the certificate to derive permissions (CN=?, O=system:kube-controller-manager)
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-controller-manager-group
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:kube-controller-manager
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:kube-controller-manager
+
+---
+# This authorizes a BROAD set of permissions to the controller manager.
+# That may not be desirable. TODO: reassess.
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-controller-manager-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:aggregate-to-admin
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:kube-controller-manager
+---
+# Allow the controller to update node status... seems... risky? # TODO
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  annotations:
+    rbac.authorization.kubernetes.io/autoupdate: "true"
+  creationTimestamp: null
+  labels:
+    kubernetes.io/bootstrapping: rbac-defaults
+  name: system:kube-controller-manager-node-update
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name:  system:controller:attachdetach-controller
+subjects:
+- apiGroup: rbac.authorization.k8s.io
+  kind: Group
+  name: system:kube-controller-manager
+
+  
+
+
+ 

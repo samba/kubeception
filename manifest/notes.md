@@ -47,3 +47,10 @@ https://www.openssl.org/docs/manmaster/man5/config.html
 
 ### Cluster setup
 https://www.ibm.com/support/knowledgecenter/en/SSMNED_5.0.0/com.ibm.apic.install.doc/tapic_install_Kubernetes.html
+
+
+
+### Role bindings and permissions for core components
+
+Example
+https://github.com/kubernetes/kubernetes/blob/v1.8.0/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-role-bindings.yaml

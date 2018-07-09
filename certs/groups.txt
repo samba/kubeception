@@ -1,7 +1,7 @@
 # This is a simplistic flatfile.
 # <username>: <groups, comma-separated>
 admin: system:masters
-kubelet: system:nodes
+kubelet: system:node
 scheduler: system:kube-scheduler
 controller: system:kube-controller-manager
 proxy: system:node-proxier

@@ -184,7 +184,8 @@ host-secrets: host-secrets-cleanup $(COMPONENTS) | certs
 		--from-file=ca.crt=certs/ca.crt \
 		--from-file=api.crt=certs/system.apiserver.crt \
 		--from-file=kubelet.crt=certs/user.kubelet.crt \
-		--from-file=kubelet.key=certs/user.kubelet.key
+		--from-file=kubelet.key=certs/user.kubelet.key \
+		--from-file=kubelet.kubeconfig=certs/system.kubelet.kubeconfig
 	# kubeconfig bits for various components
 	kubectl create secret --namespace $(CLUSTER_NAME) generic system.kubeconfig.kubeception \
 		$(foreach k, $(COMPONENTS), --from-file=$(notdir $(k))=$(k))
