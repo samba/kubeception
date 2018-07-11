@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# Goal: provide a simple interface to proxy the guest cluster's API service.
+# This script makes some assumptions about the guest cluster API availability, 
+# eg. the service name and port, pursuant to the `master.yaml` deployments in
+# this repository.
+
+set -euf -o pipefail
+# set -x
+
+fail () {
+    local err="$1";
+    shift 1;
+    echo "$@" >&2
+    return ${err}
+}
+
+proxy () {
+    killprocs () {
+        pkill -P $$
+    }
+
+    trap killprocs EXIT
+    trap killprocs SIGINT
+    trap killprocs SIGTERM
+
+    while :; do
+        kubectl port-forward  -n "$1" svc/kubernetes 8443:443 --pod-running-timeout=1m0s
+        test $? -eq 0 || continue
+    done
+}
+
+
+main () {
+    config=NONE
+    namespace=NONE
+    cmdargs=NONE
+
+    while getopts ":c:n:-" OPT; do
+        case "$OPT" in
+            n) namespace="${OPTARG}";;
+            c) config="${OPTARG}";;
+            -) break;;
+        esac
+    done
+
+    shift $((OPTIND - 1))
+    cmdargs="${@}"
+
+    test -f "${config}" || fail 1 "Please provide a KUBECONFIG file.";
+    test "${namespace}" = "NONE" && fail 1 "Please provide a guest cluster namespace.";
+
+    echo "innerkube: $$"
+    local ownid=$$
+
+    # Establish a connection through the host cluster.
+    proxy "${namespace}" &
+    local pfpid=$!
+
+    # kill the proxy port-forward (background proc) when finished
+    trap "pkill -P ${pfpid}; kill ${pfpid}" EXIT
+    trap "pkill -P ${pfpid}; kill ${pfpid}" SIGINT
+    trap "pkill -P ${pfpid}; kill ${pfpid}" SIGTERM
+
+    while :; do # retry until the guest cluster is up
+        kubectl --kubeconfig="${config}" cluster-info >/dev/null && break
+        sleep 3
+    done
+
+    kubectl --kubeconfig="${config}" ${cmdargs}
+    return $?
+
+}
+
+
+main "${@}"

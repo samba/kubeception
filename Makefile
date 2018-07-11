@@ -68,6 +68,11 @@ deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML)
 	kubectl config current-context | grep -q minikube || exit 1
 	kubectl apply -f $(HOST_DEPLOYMENT_YAML)
 
+	# Apply policy bits inside the guest cluster.
+	# The host cluster might need a short window to create the containers.
+	sleep 10 && scripts/innerkube -c ./kubeception.kubeconfig -n $(CLUSTER_NAME) --\
+		apply -f $(GUEST_DEPLOYMENT_YAML)
+
 
 
 test: deploy
@@ -226,7 +231,7 @@ deployment-cleanup:
 
 # A local port forward into the inner cluster's API server
 kubeception-portforward:
-	kubectl port-forward -n kubeception svc/kubernetes 8443:443
+	kubectl port-forward -n $(CLUSTER_NAME) svc/kubernetes 8443:443
 
 # A local kubeconfig to reach the inner cluster
 kubeception.kubeconfig: template/kubeconfig $(AUTH_TOKEN) | certs Makefile
