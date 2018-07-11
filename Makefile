@@ -60,6 +60,10 @@ $(GUEST_DEPLOYMENT_YAML): $(GUEST_YAML)
 	mkdir -p $(@D)  # make temp dir
 	cat $^ > $@
 
+
+# Seconds to wait for guest API server to come up.
+DELAY := 30 
+
 # prerequisites
 deploy: kubeception.kubeconfig host-secrets
 
@@ -70,7 +74,7 @@ deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML)
 
 	# Apply policy bits inside the guest cluster.
 	# The host cluster might need a short window to create the containers.
-	sleep 10 && scripts/innerkube -c ./kubeception.kubeconfig -n $(CLUSTER_NAME) --\
+	scripts/innerkube -d $(DELAY) -c ./kubeception.kubeconfig -n $(CLUSTER_NAME) --\
 		apply -f $(GUEST_DEPLOYMENT_YAML)
 
 

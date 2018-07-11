@@ -7,6 +7,11 @@
 set -euf -o pipefail
 # set -x
 
+
+randomport () {
+    echo $((($RANDOM % 8443) + 8443))
+}
+
 fail () {
     local err="$1";
     shift 1;
@@ -24,7 +29,7 @@ proxy () {
     trap killprocs SIGTERM
 
     while :; do
-        kubectl port-forward  -n "$1" svc/kubernetes 8443:443 --pod-running-timeout=1m0s
+        kubectl port-forward  -n "$1" svc/kubernetes "$2:443" --pod-running-timeout=1m0s
         test $? -eq 0 || continue
     done
 }
@@ -33,12 +38,15 @@ proxy () {
 main () {
     config=NONE
     namespace=NONE
+    delay=10
     cmdargs=NONE
+    port=$(randomport)
 
-    while getopts ":c:n:-" OPT; do
+    while getopts ":c:n:d:-" OPT; do
         case "$OPT" in
             n) namespace="${OPTARG}";;
             c) config="${OPTARG}";;
+            d) delay="${OPTARG}";;
             -) break;;
         esac
     done
@@ -52,8 +60,14 @@ main () {
     echo "innerkube: $$"
     local ownid=$$
 
+    # Ensure guest API server is up
+    while :; do
+        kubectl cluster-info >/dev/null && break
+        sleep ${delay}
+    done
+
     # Establish a connection through the host cluster.
-    proxy "${namespace}" &
+    proxy "${namespace}" "${port}" &
     local pfpid=$!
 
     # kill the proxy port-forward (background proc) when finished
@@ -62,11 +76,11 @@ main () {
     trap "pkill -P ${pfpid}; kill ${pfpid}" SIGTERM
 
     while :; do # retry until the guest cluster is up
-        kubectl --kubeconfig="${config}" cluster-info >/dev/null && break
+        kubectl --kubeconfig="${config}" --server="https://localhost:${port}"  cluster-info >/dev/null && break
         sleep 3
     done
 
-    kubectl --kubeconfig="${config}" ${cmdargs}
+    kubectl --kubeconfig="${config}" --server="https://localhost:${port}"  ${cmdargs}
     return $?
 
 }
