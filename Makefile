@@ -36,13 +36,14 @@ CERT_CONFIG := certs/cluster.$(CLUSTER_NAME).config
 AUTH_TOKEN := certs/cluster.$(CLUSTER_NAME).token
 CLUSTER_NAMES := certs/cluster.$(CLUSTER_NAME).names
 
+GUEST_CONFIG := ./kubeception.kubeconfig
 
 
 export CLUSTER_NAME MASTER_IP MASTER_CLUSTER_IP
 
 .PHONY: up down deploy test clean
 
-all: up certs deploy kubeception.kubeconfig
+all: up certs deploy $(GUEST_CONFIG)
 
 up:
 	minikube status | grep -i stopped || exit 0
@@ -65,7 +66,7 @@ $(GUEST_DEPLOYMENT_YAML): $(GUEST_YAML)
 DELAY := 30 
 
 # prerequisites
-deploy: kubeception.kubeconfig host-secrets
+deploy: $(GUEST_CONFIG) host-secrets
 
 deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML) 
 	# Fail if not running in minikube
@@ -74,7 +75,7 @@ deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML)
 
 	# Apply policy bits inside the guest cluster.
 	# The host cluster might need a short window to create the containers.
-	scripts/innerkube -d $(DELAY) -c ./kubeception.kubeconfig -n $(CLUSTER_NAME) --\
+	scripts/innerkube -d $(DELAY) -c $(GUEST_CONFIG) -n $(CLUSTER_NAME) --\
 		apply -f $(GUEST_DEPLOYMENT_YAML)
 
 
@@ -244,7 +245,7 @@ kubeception-portforward:
 	kubectl port-forward -n $(CLUSTER_NAME) svc/kubernetes 8443:443
 
 # A local kubeconfig to reach the inner cluster
-kubeception.kubeconfig: template/kubeconfig $(AUTH_TOKEN) | certs Makefile
+$(GUEST_CONFIG): template/kubeconfig $(AUTH_TOKEN) | certs Makefile
 	cp -v $< $@
 	kubectl config set-cluster kubeception \
 		--server="https://localhost:8443" \
