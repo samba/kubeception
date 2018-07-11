@@ -107,7 +107,7 @@ certs/apiserver_tokens.csv: $(AUTH_TOKEN)
 certs/%.config: $(CSR_TEMPLATE) | Makefile
 	sed -e 's@<MASTER_IP>@$(MASTER_IP)@; s@<MASTER_CLUSTER_IP>@$(MASTER_CLUSTER_IP)@;' > $@ < $<
 
-
+.PRECIOUS: certs/%.key
 certs/%.key:
 	openssl genrsa -out $@ 2048
 
@@ -119,6 +119,7 @@ certs/system.%.csr: certs/system.%.key $(CERT_CONFIG)
 	# @cat -n "$(CERT_CONFIG)"; echo; sync
 	openssl req -new -key $< -out $@ -subj "/CN=$*"
 
+.PRECIOUS: certs/%.key
 certs/%.crt: certs/%.csr certs/ca.key certs/ca.crt $(CERT_CONFIG)
 	openssl x509 -req -in $< -CA certs/ca.crt -CAkey certs/ca.key \
 		-CAcreateserial -out $@ -days $(CERTIFICATE_VALID_DAYS) \
@@ -140,6 +141,7 @@ cert-cleanup:
 	rm -rvf certs/*.groups
 
 # Prepare a kubeconfig for internal system components, e.g. scheduler
+.PRECIOUS: certs/system.%.kubeconfig
 certs/system.%.kubeconfig: template/kubeconfig certs/ca.crt certs/user.%.crt
 	cp -v $< $@
 	kubectl config set-cluster kubeception \
