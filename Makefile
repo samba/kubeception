@@ -79,9 +79,13 @@ deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML)
 		apply -f $(GUEST_DEPLOYMENT_YAML)
 
 
+deploy-guest-nginx: $(GUEST_CONFIG)
+	KUBECONFIG=$(GUEST_CONFIG) kubectl run nginx --image=nginx:latest \
+		--replicas=2 --port=80 --expose
 
-test: deploy
-	echo "TODO: test the deployment."
+
+test: deploy deploy-guest-nginx
+	-echo "(testing the guest deployment)"
 
 
 # Certificate preparation

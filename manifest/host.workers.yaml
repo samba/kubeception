@@ -1,4 +1,3 @@
-# TODO: deploy an isolated docker daemon with each kubelet
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -25,11 +24,14 @@ spec:
             command:
               - '/hyperkube'
               - 'kubelet'
+              # - '--containerized' # NO, this calls docker internally too.
               - '--allow-privileged=false'  # don't allow the guest to run privileged.
               - '--fail-swap-on=false'  # XXX for local testing only
               - '--kubeconfig=/opt/kubernetes/certs/kubelet.kubeconfig'
               - '--docker-endpoint=$(DOCKER_HOST)'
               - '--v=2'
+              # TODO: offer a config file
+              # https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/
             securityContext:
               privileged: true  # required for kubelet to expored shared mounts
             ports:
@@ -42,24 +44,30 @@ spec:
             volumeMounts:
               - mountPath: /opt/kubernetes/certs
                 name: kubeconfig
+              - name: docker-storage
+                mountPath: /var/lib/docker
+              - name: kubestorage
+                mountPath: /var/lib/kubelet
             env:
               - name: API_SERVER
                 value: https://kubernetes-kubeception:443/
               - name: DOCKER_HOST
                 value: tcp://localhost:2375
-          - name: kubeception-docker-daemon
-            image: docker:1.12.6-dind
+          - name: kubeception-docker-daemon  # this container serves 2375
+            image: docker:1.13.1-dind
             resources:
               requests:
                 cpu: 20m
                 memory: 512Mi
             securityContext:
-              privileged: true
+              privileged: true # required for docker to run...
             volumeMounts:
               - name: docker-storage
                 mountPath: /var/lib/docker
+              - name: kubestorage
+                mountPath: /var/lib/kubelet
           - name: kubeception-docker-service
-            image: docker:1.12.6
+            image: docker:1.13.1
             command: ['docker', 'run', '-p', '80:80', 'httpd:latest']
             resources:
               requests:
@@ -73,4 +81,6 @@ spec:
           secret:
             secretName: kubelet.kubeception
         - name: docker-storage
+          emptyDir: {}
+        - name: kubestorage
           emptyDir: {}
