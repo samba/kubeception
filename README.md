@@ -38,5 +38,7 @@ Nothing is highly available. Nothing is secure.
 - [x] ~kubelet pods don't register as nodes~
 - [x] ~Deployments can't schedule pods...~ resolved w/ controller manager fix.
 - [x] ~Possible `ClusterRoleBinding` issues preventing sufficient privileges for controller-manager (etc)~  resolved with controller manager's service account token management. 
-- [ ] Docker w/ kubelet fails to start containers.
+- [x] ~Docker w/ kubelet fails to start containers.~
+- [ ] Something in initial spinup of the guest cluster is slow. API server proxy fails, but retry succeeds.
+- [ ] Services within the guest cluster don't resolve deployment names to pods to nodes, correctly... yet. (WIP w/ coredns)
 

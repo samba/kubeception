@@ -239,9 +239,12 @@ host-secrets-cleanup:
 # Remove the deployments of the interior cluster.
 deployment-cleanup:
 	kubectl config current-context | grep minikube && \
-		kubectl get deployment -n kubeception --no-headers -o name \
+		kubectl get deployment -n $(CLUSTER_NAME) --no-headers -o name \
 	 	| cut -d '/' -f 2 \
-		| xargs -n 1 kubectl delete deployment -n kubeception || exit 0
+		| xargs -n 1 kubectl delete deployment -n $(CLUSTER_NAME) || true
+
+	kubectl config current-context | grep minikube && \
+		kubectl delete pvc -n $(CLUSTER_NAME) etcd-pv-claim || true
 
 
 # A local port forward into the inner cluster's API server
