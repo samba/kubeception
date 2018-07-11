@@ -8,8 +8,10 @@
 
 
 
-DEPLOYMENT_YAML := .tmp/deployment.yaml
-SOURCE_YAML := $(shell ls -1 ./manifest/*.yaml)
+HOST_DEPLOYMENT_YAML := .tmp/host.deployment.yaml
+GUEST_DEPLOYMENT_YAML := .tmp/guest.deployment.yaml
+HOST_YAML := $(shell ls -1 ./manifest/host.*.yaml)
+GUEST_YAML := $(shell ls -1 ./manifest/guest.*.yaml)
 CSR_TEMPLATE := template/openssl.conf
 CERTIFICATE_VALID_DAYS := 30000
 
@@ -50,14 +52,22 @@ down:
 	minikube stop	
 
 
-$(DEPLOYMENT_YAML): $(SOURCE_YAML)
+$(HOST_DEPLOYMENT_YAML): $(HOST_YAML)
 	mkdir -p $(@D)  # make temp dir
 	cat $^ > $@
 
-deploy:  $(DEPLOYMENT_YAML) kubeception.kubeconfig | host-secrets
+$(GUEST_DEPLOYMENT_YAML): $(GUEST_YAML)
+	mkdir -p $(@D)  # make temp dir
+	cat $^ > $@
+
+# prerequisites
+deploy: kubeception.kubeconfig host-secrets
+
+deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML) 
 	# Fail if not running in minikube
 	kubectl config current-context | grep -q minikube || exit 1
-	kubectl apply -f $<
+	kubectl apply -f $(HOST_DEPLOYMENT_YAML)
+
 
 
 test: deploy

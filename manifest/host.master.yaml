@@ -141,10 +141,14 @@ spec:
               - '--kubeconfig=/opt/kubernetes/certs/system.controller.kubeconfig'
               - '--leader-elect=false'
               - '--master=$(API_SERVER)'
+              # - '--use-service-account-credentials'
+              # - '--service-account-private-key-file=/opt/kubernetes/controller/controller.key'
               - '--v=2'
             volumeMounts:
               - mountPath: /opt/kubernetes/certs
                 name: kubeconfig
+              - mountPath: /opt/kubernetes/controller
+                name: controller
             env:
               - name: API_SERVER
                 value: https://kubernetes-kubeception:443/
@@ -152,6 +156,9 @@ spec:
         - name: kubeconfig
           secret:
             secretName: system.kubeconfig.kubeception
+        - name: controller
+          secret:
+            secretName: controller.kubeception
 
 ---
 
