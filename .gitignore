@@ -7,3 +7,4 @@ certs/cluster.*.conf
 .tmp/
 certs/*token*
 certs/ca.*
+certs/*.pub

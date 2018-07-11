@@ -92,7 +92,7 @@ $(CLUSTER_NAMES):
 .PHONY: ca	
 ca: certs/ca.key certs/ca.crt 
 
-
+COMPONENT_KEYS := $(shell echo certs/user.{controller,scheduler,proxy,volume,kubelet}.{key,pub})
 COMPONENT_CERTS := $(shell echo certs/user.{controller,scheduler,proxy,volume,kubelet}.crt)
 COMPONENTS := $(shell echo certs/system.{scheduler,controller,proxy,volume,kubelet}.kubeconfig)
 
@@ -104,7 +104,7 @@ certs: certs/system.etcdclient.crt certs/system.etcdclient.key  # for apiserver
 certs: certs/system.etcdserver.crt certs/system.etcdserver.key  # etcd
 certs: certs/user.admin.crt certs/user.admin.key                # initial user
 certs: certs/user.kubelet.crt certs/user.kubelet.key            # kubelet
-certs: $(COMPONENTS) $(COMPONENT_CERTS)
+certs: $(COMPONENTS) $(COMPONENT_CERTS) $(COMPONENT_KEYS)
 
 # The CA is a self-signed certificate
 certs/ca.crt: certs/ca.key
@@ -129,6 +129,10 @@ certs/%.config: $(CSR_TEMPLATE) | Makefile
 .PRECIOUS: certs/%.key
 certs/%.key:
 	openssl genrsa -out $@ 2048
+
+.PRECIOUS: certs/%.pub
+certs/%.pub: certs/%.key
+	openssl rsa -in $< -pubout > $@
 
 certs/user.%.groups: certs/groups.txt
 	grep '^$*:' $< | cut -d ':' -f 2- | tr -d ' ' > $@
@@ -182,7 +186,7 @@ certs/system.%.kubeconfig: template/kubeconfig certs/ca.crt certs/user.%.crt
 
 
 # In the host cluster, generate secrets for the various components.
-host-secrets: host-secrets-cleanup $(COMPONENTS) $(COMPONENT_CERTS) | certs
+host-secrets: host-secrets-cleanup  certs
 	kubectl create namespace $(CLUSTER_NAME) || true
 	kubectl create secret --namespace $(CLUSTER_NAME) generic certauth.kubeception \
 		--from-file=ca.crt=certs/ca.crt
@@ -198,6 +202,7 @@ host-secrets: host-secrets-cleanup $(COMPONENTS) $(COMPONENT_CERTS) | certs
 		--from-file=etcd.key=certs/system.etcdclient.key \
 		--from-file=api.crt=certs/system.apiserver.crt \
 		--from-file=api.key=certs/system.apiserver.key \
+		--from-file=controller.pub=certs/user.controller.pub \
 		--from-file=tokens.csv=certs/apiserver_tokens.csv
 	# keys/etc needed for kubelet, an API server client
 	kubectl create secret --namespace $(CLUSTER_NAME) generic kubelet.kubeception \
@@ -210,6 +215,7 @@ host-secrets: host-secrets-cleanup $(COMPONENTS) $(COMPONENT_CERTS) | certs
 	kubectl create secret --namespace $(CLUSTER_NAME) generic controller.kubeception \
 		--from-file=ca.crt=certs/ca.crt \
 		--from-file=controller.key=certs/user.controller.key \
+		--from-file=controller.pub=certs/user.controller.pub \
 		--from-file=controller.crt=certs/user.controller.crt
 	# kubeconfig bits for various components
 	kubectl create secret --namespace $(CLUSTER_NAME) generic system.kubeconfig.kubeception \

@@ -36,6 +36,7 @@ Nothing is highly available. Nothing is secure.
 
 - [x] ~Certificates: CA _key_ should **not** be stored in k8s.~
 - [x] ~kubelet pods don't register as nodes~
-- [ ] Deployments can't schedule pods...
-- [ ] Possible `ClusterRoleBinding` issues preventing sufficient privileges for controller-manager (etc)
+- [x] ~Deployments can't schedule pods...~ resolved w/ controller manager fix.
+- [x] ~Possible `ClusterRoleBinding` issues preventing sufficient privileges for controller-manager (etc)~  resolved with controller manager's service account token management. 
+- [ ] Docker w/ kubelet fails to start containers.
 

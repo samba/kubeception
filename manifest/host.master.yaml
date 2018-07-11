@@ -52,6 +52,7 @@ spec:
               - '--kubelet-certificate-authority=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--client-ca-file=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--token-auth-file=/opt/kubernetes/certs/apiserver/tokens.csv'
+              - '--service-account-key-file=/opt/kubernetes/certs/apiserver/controller.pub'
             ports:
               - name: https
                 containerPort: 6443
@@ -141,8 +142,9 @@ spec:
               - '--kubeconfig=/opt/kubernetes/certs/system.controller.kubeconfig'
               - '--leader-elect=false'
               - '--master=$(API_SERVER)'
-              # - '--use-service-account-credentials'
-              # - '--service-account-private-key-file=/opt/kubernetes/controller/controller.key'
+              - '--use-service-account-credentials'
+              - '--service-account-private-key-file=/opt/kubernetes/controller/controller.key'
+              - '--root-ca-file=/opt/kubernetes/controller/ca.crt'
               - '--v=2'
             volumeMounts:
               - mountPath: /opt/kubernetes/certs
