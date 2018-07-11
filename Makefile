@@ -87,6 +87,10 @@ $(CLUSTER_NAMES):
 .PHONY: ca	
 ca: certs/ca.key certs/ca.crt 
 
+
+COMPONENT_CERTS := $(shell echo certs/user.{controller,scheduler,proxy,volume,kubelet}.crt)
+COMPONENTS := $(shell echo certs/system.{scheduler,controller,proxy,volume,kubelet}.kubeconfig)
+
 .PHONY: certs
 certs: certs/apiserver_tokens.csv
 certs: certs/ca.crt 
@@ -95,7 +99,7 @@ certs: certs/system.etcdclient.crt certs/system.etcdclient.key  # for apiserver
 certs: certs/system.etcdserver.crt certs/system.etcdserver.key  # etcd
 certs: certs/user.admin.crt certs/user.admin.key                # initial user
 certs: certs/user.kubelet.crt certs/user.kubelet.key            # kubelet
-
+certs: $(COMPONENTS) $(COMPONENT_CERTS)
 
 # The CA is a self-signed certificate
 certs/ca.crt: certs/ca.key
@@ -171,10 +175,9 @@ certs/system.%.kubeconfig: template/kubeconfig certs/ca.crt certs/user.%.crt
 	kubectl config use-context kubeception --kubeconfig=$@
 
 
-COMPONENTS := $(shell echo certs/system.{scheduler,controller,proxy,volume,kubelet}.kubeconfig)
 
 # In the host cluster, generate secrets for the various components.
-host-secrets: host-secrets-cleanup $(COMPONENTS) | certs
+host-secrets: host-secrets-cleanup $(COMPONENTS) $(COMPONENT_CERTS) | certs
 	kubectl create namespace $(CLUSTER_NAME) || true
 	kubectl create secret --namespace $(CLUSTER_NAME) generic certauth.kubeception \
 		--from-file=ca.crt=certs/ca.crt
@@ -198,13 +201,18 @@ host-secrets: host-secrets-cleanup $(COMPONENTS) | certs
 		--from-file=kubelet.crt=certs/user.kubelet.crt \
 		--from-file=kubelet.key=certs/user.kubelet.key \
 		--from-file=kubelet.kubeconfig=certs/system.kubelet.kubeconfig
+	# controller needs some special bits for signing tokens.
+	kubectl create secret --namespace $(CLUSTER_NAME) generic controller.kubeception \
+		--from-file=ca.crt=certs/ca.crt \
+		--from-file=controller.key=certs/user.controller.key \
+		--from-file=controller.crt=certs/user.controller.crt
 	# kubeconfig bits for various components
 	kubectl create secret --namespace $(CLUSTER_NAME) generic system.kubeconfig.kubeception \
 		$(foreach k, $(COMPONENTS), --from-file=$(notdir $(k))=$(k))
 	
 
 host-secrets-cleanup:
-	for i in etcdserver apiserver kubelet certauth system.kubeconfig; do \
+	for i in etcdserver apiserver kubelet certauth controller system.kubeconfig; do \
 		kubectl delete --namespace $(CLUSTER_NAME) secret "$$i.kubeception" || true; \
 		done
 
