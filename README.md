@@ -5,7 +5,27 @@ Code quality and architectural concerns will be improved with time.
 
 **Be warned**, this codebase currently incorporates lots of hacks, and several known but unresolved issues.
 
+# Motivation
 
+Private cloud environments benefit greatly from the performance gains of bare-metal 
+Kubernetes, but simultaneously require isolated administrative domains for individual customers (i.e. internal teams).
+
+Operations teams need the flexibility of establishing a single, uniform platform for governing all computing resources. Application teams need the ability
+to tune, upgrade, and administer their own Kubernetes clusters independent of the 
+underlying infrastructure management.
+
+## Goals 
+
+- Prove the viability of a "guest cluster" model, where Kubernetes operates within Kubernetes.
+- Rely predominantly on Kubernetes primitives and its functionality, and avoid extensive reliance on intermediate virtualization layers.
+
+## Limitations 
+
+Some concerns are not addressed (yet) in this model:
+- Failure domains relevant to private infrastructure environments.
+- Stringent isolation of virtual networks for guest clusters.
+
+*(probably lots of others... feel free to file issues.)*
 
 # Usage
 
@@ -32,7 +52,7 @@ make down # destroys minikube cluster
 
 ## Known Issues
 
-Nothing is highly available. Nothing is secure.
+Nothing is highly available. ~Nothing is secure.~
 
 - [x] ~Certificates: CA _key_ should **not** be stored in k8s.~
 - [x] ~kubelet pods don't register as nodes~
