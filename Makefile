@@ -217,14 +217,16 @@ host-secrets: host-secrets-cleanup  certs
 		--from-file=api.crt=certs/system.apiserver.crt \
 		--from-file=api.key=certs/system.apiserver.key \
 		--from-file=controller.pub=certs/user.controller.pub \
-		--from-file=tokens.csv=certs/apiserver_tokens.csv
+		--from-file=tokens.csv=certs/apiserver_tokens.csv \
+		--from-file=proxy.kubeconfig=certs/system.proxy.kubeconfig
 	# keys/etc needed for kubelet, an API server client
 	kubectl create secret --namespace $(CLUSTER_NAME) generic kubelet.kubeception \
 		--from-file=ca.crt=certs/ca.crt \
 		--from-file=api.crt=certs/system.apiserver.crt \
 		--from-file=kubelet.crt=certs/user.kubelet.crt \
 		--from-file=kubelet.key=certs/user.kubelet.key \
-		--from-file=kubelet.kubeconfig=certs/system.kubelet.kubeconfig
+		--from-file=kubelet.kubeconfig=certs/system.kubelet.kubeconfig \
+		--from-file=proxy.kubeconfig=certs/system.proxy.kubeconfig
 	# controller needs some special bits for signing tokens.
 	kubectl create secret --namespace $(CLUSTER_NAME) generic controller.kubeception \
 		--from-file=ca.crt=certs/ca.crt \

@@ -53,6 +53,19 @@ spec:
                 value: https://kubernetes-kubeception:443/
               - name: DOCKER_HOST
                 value: tcp://localhost:2375
+          - name: hyperkube-proxy
+            image: k8s.gcr.io/hyperkube:v1.11.0
+            command:
+                - '/hyperkube'
+                - 'kube-proxy' # TODO: use a configfile here instead too. flags are deprecated.
+                - '--proxy-mode=userspace'
+                - '--master=https://kubernetes-kubeception:443'
+                - '--kubeconfig=/opt/kubernetes/certs/proxy.kubeconfig'
+            securityContext:
+              privileged: true
+            volumeMounts:
+              - mountPath: /opt/kubernetes/certs
+                name: kubeconfig
           - name: kubeception-docker-daemon  # this container serves 2375
             image: docker:1.13.1-dind
             resources:

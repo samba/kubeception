@@ -2,8 +2,8 @@
 #   host control plane.
 #  https://kubernetes.io/docs/concepts/services-networking/network-policies/
 # 
-# TODO: Deploy kube-proxy in the APi server's pod, with calico or similar to
-#   completely isolate the inner cluster's network.
+# TODO: Provide pod IP as bind address, etc... 
+#    cf. https://akomljen.com/kubernetes-environment-variables/
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -39,7 +39,7 @@ spec:
               - '--secure-port=6443'
               - '--insecure-port=8080'  # kept for testing, temporarily.
               - '--runtime-config=api/all=true,batch/v2alpha1=true,rbac.authorization.k8s.io/v1alpha1=true'
-              - '--service-cluster-ip-range=10.150.0.0/16'
+              - '--service-cluster-ip-range=10.150.0.0/16'  # XXX this will need to be tuned in each host cluster, for each guest cluster
               - '--etcd-cafile=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--etcd-certfile=/opt/kubernetes/certs/apiserver/etcd.crt'
               - '--etcd-keyfile=/opt/kubernetes/certs/apiserver/etcd.key'
@@ -59,6 +59,19 @@ spec:
                 value: kubeception-etcd
               - name: ETCD_PORT
                 value: '2379'
+            volumeMounts:
+              - mountPath: /opt/kubernetes/certs/apiserver
+                name: apiserver-secrets
+          - name: hyperkube-proxy
+            image: k8s.gcr.io/hyperkube:v1.11.0
+            command:
+                - '/hyperkube'
+                - 'kube-proxy' # TODO: use a configfile here instead too. flags are deprecated.
+                - '--proxy-mode=userspace'
+                - '--master=https://localhost:6443'
+                - '--kubeconfig=/opt/kubernetes/certs/apiserver/proxy.kubeconfig'
+            securityContext:
+              privileged: true
             volumeMounts:
               - mountPath: /opt/kubernetes/certs/apiserver
                 name: apiserver-secrets
