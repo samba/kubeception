@@ -8,3 +8,4 @@ certs/cluster.*.conf
 certs/*token*
 certs/ca.*
 certs/*.pub
+manifest/*.dynamic.yaml
