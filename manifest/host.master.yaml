@@ -25,10 +25,6 @@ spec:
           component: api-server
       spec:
         containers:
-          - name: debug
-            image: alpine:latest
-            command: ['sh', '-c', 'tail -f /dev/null']
-
           - name: hyperkube-apiserver
             image: k8s.gcr.io/hyperkube:v1.11.0
             command: 
