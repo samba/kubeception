@@ -12,6 +12,7 @@ HOST_DEPLOYMENT_YAML := .tmp/host.deployment.yaml
 GUEST_DEPLOYMENT_YAML := .tmp/guest.deployment.yaml
 HOST_YAML := $(shell ls -1 ./manifest/host.*.yaml)
 GUEST_YAML := $(shell ls -1 ./manifest/guest.*.yaml)
+GUEST_ADDONS := manifest/guest.addons.dynamic.yaml
 CSR_TEMPLATE := template/openssl.conf
 CERTIFICATE_VALID_DAYS := 30000
 
@@ -36,7 +37,7 @@ CERT_CONFIG := certs/cluster.$(CLUSTER_NAME).config
 AUTH_TOKEN := certs/cluster.$(CLUSTER_NAME).token
 CLUSTER_NAMES := certs/cluster.$(CLUSTER_NAME).names
 
-GUEST_CONFIG := ./kubeception.kubeconfig
+GUEST_CONFIG := ./$(CLUSTER_NAME).kubeconfig
 
 
 export CLUSTER_NAME MASTER_IP MASTER_CLUSTER_IP
@@ -52,13 +53,16 @@ up:
 down:
 	minikube stop	
 
+$(GUEST_ADDONS): template/addons.txt scripts/addons_generate.sh 
+	cat $< | bash scripts/addons_generate.sh > $@
+
 
 $(HOST_DEPLOYMENT_YAML): $(HOST_YAML)
-	mkdir -p $(@D)  # make temp dir
+	mkdir -p $(@D)  # make temp dir if not exist
 	cat $^ > $@
 
-$(GUEST_DEPLOYMENT_YAML): $(GUEST_YAML)
-	mkdir -p $(@D)  # make temp dir
+$(GUEST_DEPLOYMENT_YAML): $(GUEST_YAML) $(GUEST_ADDONS)
+	mkdir -p $(@D)  # make temp dir if not exist
 	cat $^ > $@
 
 
@@ -114,6 +118,7 @@ certs: certs/system.etcdserver.crt certs/system.etcdserver.key  # etcd
 certs: certs/user.admin.crt certs/user.admin.key                # initial user
 certs: certs/user.kubelet.crt certs/user.kubelet.key            # kubelet
 certs: $(COMPONENTS) $(COMPONENT_CERTS) $(COMPONENT_KEYS)
+certs: $(GUEST_CONFIG)
 
 # The CA is a self-signed certificate
 certs/ca.crt: certs/ca.key

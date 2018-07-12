@@ -1,0 +1,2 @@
+# List of URLs for manifests to install.
+https://raw.githubusercontent.com/coredns/deployment/master/kubernetes/coredns.yaml.sed
