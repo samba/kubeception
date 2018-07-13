@@ -4,6 +4,7 @@
 # 
 # TODO: Provide pod IP as bind address, etc... 
 #    cf. https://akomljen.com/kubernetes-environment-variables/
+#    cf. https://kubernetes.io/docs/tasks/inject-data-application/downward-api-volume-expose-pod-information/
 ---
 kind: Deployment
 apiVersion: apps/v1
@@ -45,10 +46,15 @@ spec:
               - '--etcd-keyfile=/opt/kubernetes/certs/apiserver/etcd.key'
               - '--tls-cert-file=/opt/kubernetes/certs/apiserver/api.crt'
               - '--tls-private-key-file=/opt/kubernetes/certs/apiserver/api.key'
+              - '--kubelet-client-key=/opt/kubernetes/certs/apiserver/api.key'
+              - '--kubelet-client-certificate=/opt/kubernetes/certs/apiserver/api.crt'
               - '--kubelet-certificate-authority=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--client-ca-file=/opt/kubernetes/certs/apiserver/ca.crt'
               - '--token-auth-file=/opt/kubernetes/certs/apiserver/tokens.csv'
               - '--service-account-key-file=/opt/kubernetes/certs/apiserver/controller.pub'
+              - '--kubelet-preferred-address-types=InternalIP,Hostname'  # XXX allows ignoring DNS
+              - '--feature-gates=TokenRequest=true'
+              - '--enable-bootstrap-token-auth'
             ports:
               - name: https
                 containerPort: 6443
@@ -154,6 +160,10 @@ spec:
               - '--use-service-account-credentials'
               - '--service-account-private-key-file=/opt/kubernetes/controller/controller.key'
               - '--root-ca-file=/opt/kubernetes/controller/ca.crt'
+              - '--controllers=tokencleaner,bootstrapsigner,*'
+              - '--cluster-signing-cert-file=/opt/kubernetes/controller/ca.crt'
+              - '--cluster-signing-key-file=/opt/kubernetes/controller/ca.key'
+              - '--feature-gates=RotateKubeletServerCertificate=true'
               - '--v=2'
             volumeMounts:
               - mountPath: /opt/kubernetes/certs

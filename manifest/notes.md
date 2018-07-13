@@ -1,5 +1,8 @@
 # Notes
 
+## Observations
+
+- The hyperkube container provides `openssl`, so certificate generation can be executed within the host cluster in a familiar container.
 
 
 ## Shortcuts
@@ -22,6 +25,19 @@ curl -v --cacert /opt/kubernetes/certs/ca/tls.crt \
 Hyperkube args/opts help
 `docker run -it --rm  gcr.io/google_containers/hyperkube:v1.10.4 /hyperkube kube-apiserver -h`
 
+
+Digging up logs from within the Kubelet container...
+
+```shell
+# jump into the kubelet container
+kubectl exec -it  -n kubeception kubeception-kubelet-cc6f8c9f-skgz9 -- /bin/sh
+
+# discover logs per guest container
+find /var/log/pods  -type l -name '*.log'
+
+# resolve the API server hostname within the cluster from kubelet container
+getent hosts kubeception-apiserver
+```
 
 ## Reference Material
 

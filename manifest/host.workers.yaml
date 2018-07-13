@@ -5,7 +5,7 @@ metadata:
   name: kubeception-kubelet
   namespace: kubeception
 spec:
-  replicas: 2
+  replicas: 1
   selector: 
     matchLabels:
       role.kubeception: kubelet
@@ -24,12 +24,14 @@ spec:
             command:
               - '/hyperkube'
               - 'kubelet'
-              # - '--containerized' # NO, this calls docker internally too.
               - '--allow-privileged=false'  # don't allow the guest to run privileged.
               - '--fail-swap-on=false'  # XXX for local testing only
-              - '--kubeconfig=/opt/kubernetes/certs/kubelet.kubeconfig'
+              - '--kubeconfig=/var/lib/kubelet/runtime.kubeconfig'
+              - '--client-ca-file=/opt/kubernetes/certs/ca.crt'
               - '--docker-endpoint=$(DOCKER_HOST)'
+              - '--bootstrap-kubeconfig=/opt/kubernetes/certs/bootstrap.kubeconfig'
               - '--v=2'
+              # TODO: provide certificates with IP SAN for kubelet nodes.
               # TODO: offer a config file
               # https://kubernetes.io/docs/tasks/administer-cluster/kubelet-config-file/
             securityContext:

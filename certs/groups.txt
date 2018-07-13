@@ -6,3 +6,4 @@ scheduler: system:kube-scheduler
 controller: system:kube-controller-manager
 proxy: system:node-proxier
 volume: system:volume-scheduler
+bootstrap: system:bootstrappers

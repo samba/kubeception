@@ -60,5 +60,7 @@ Nothing is highly available. ~Nothing is secure.~
 - [x] ~Possible `ClusterRoleBinding` issues preventing sufficient privileges for controller-manager (etc)~  resolved with controller manager's service account token management. 
 - [x] ~Docker w/ kubelet fails to start containers.~
 - [ ] Something in initial spinup of the guest cluster is slow. API server proxy fails, but retry succeeds.
-- [ ] Services within the guest cluster don't resolve deployment names to pods to nodes, correctly... yet. (WIP w/ coredns)
+- [ ] Services within the guest cluster don't resolve deployment names to pods to nodes, correctly... yet. (WIP w/ coredns);
+- [ ] Guest cluster apiserver -> node (kubelet) currently fails because kubelet's TLS certs don't have IP SANs. This blocks service forwarding and log retrieval.
+
 

@@ -36,6 +36,7 @@ USERID := $(shell echo $(CLUSTER_NAME) $(USERNAME) "$(shell date)" | openssl md5
 CERT_CONFIG := certs/cluster.$(CLUSTER_NAME).config
 AUTH_TOKEN := certs/cluster.$(CLUSTER_NAME).token
 CLUSTER_NAMES := certs/cluster.$(CLUSTER_NAME).names
+NODE_BOOTSTRAP_TOKEN := certs/bootstrap.$(CLUSTER_NAME).token
 
 GUEST_CONFIG := ./$(CLUSTER_NAME).kubeconfig
 
@@ -72,11 +73,22 @@ DELAY := 30
 # prerequisites
 deploy: $(GUEST_CONFIG) host-secrets
 
-deploy:  $(HOST_DEPLOYMENT_YAML) $(GUEST_DEPLOYMENT_YAML) 
+deploy:  $(HOST_DEPLOYMENT_YAML)  $(GUEST_CONFIG)
 	# Fail if not running in minikube
 	kubectl config current-context | grep -q minikube || exit 1
 	kubectl apply -f $(HOST_DEPLOYMENT_YAML)
 
+	sleep 10 && $(MAKE) deploy-guest-policy
+	# sleep 10 && $(MAKE) deploy-guest-addons
+
+
+deploy-guest-policy: $(shell ls -1 manifest/guest.{policy,core}.yaml)
+	for f in $^; do \
+		scripts/innerkube -d $(DELAY) -c $(GUEST_CONFIG) -n $(CLUSTER_NAME) --\
+			apply -f $$f; \
+		done
+
+deploy-guest-addons: $(GUEST_DEPLOYMENT_YAML) $(GUEST_CONFIG)
 	# Apply policy bits inside the guest cluster.
 	# The host cluster might need a short window to create the containers.
 	scripts/innerkube -d $(DELAY) -c $(GUEST_CONFIG) -n $(CLUSTER_NAME) --\
@@ -106,8 +118,8 @@ $(CLUSTER_NAMES):
 ca: certs/ca.key certs/ca.crt 
 
 COMPONENT_KEYS := $(shell echo certs/user.{controller,scheduler,proxy,volume,kubelet}.{key,pub})
-COMPONENT_CERTS := $(shell echo certs/user.{controller,scheduler,proxy,volume,kubelet}.crt)
-COMPONENTS := $(shell echo certs/system.{scheduler,controller,proxy,volume,kubelet}.kubeconfig)
+COMPONENT_CERTS := $(shell echo certs/user.{controller,scheduler,proxy,volume,kubelet,bootstrap}.crt)
+COMPONENTS := $(shell echo certs/system.{scheduler,controller,proxy,volume,kubelet,bootstrap}.kubeconfig)
 
 .PHONY: certs
 certs: certs/apiserver_tokens.csv
@@ -118,7 +130,7 @@ certs: certs/system.etcdserver.crt certs/system.etcdserver.key  # etcd
 certs: certs/user.admin.crt certs/user.admin.key                # initial user
 certs: certs/user.kubelet.crt certs/user.kubelet.key            # kubelet
 certs: $(COMPONENTS) $(COMPONENT_CERTS) $(COMPONENT_KEYS)
-certs: $(GUEST_CONFIG)
+certs: certs/bootstrap.kubeconfig
 
 # The CA is a self-signed certificate
 certs/ca.crt: certs/ca.key
@@ -134,8 +146,9 @@ certs/%.token:
 		| tr -d "=+/[:space:]" \
 		| dd bs=32 count=1 >$@ 2>/dev/null
 
-certs/apiserver_tokens.csv: $(AUTH_TOKEN)
+certs/apiserver_tokens.csv: $(AUTH_TOKEN) $(NODE_BOOTSTRAP_TOKEN)
 	echo "$(shell cat $(AUTH_TOKEN)),admin,$(USERID),\"system:masters\"" > $@
+	echo "$(shell cat $(NODE_BOOTSTRAP_TOKEN)),kubelet-bootstrap,73,\"system:bootstrappers\"" >>$@
 
 certs/%.config: $(CSR_TEMPLATE) | Makefile
 	sed -e 's@<MASTER_IP>@$(MASTER_IP)@; s@<MASTER_CLUSTER_IP>@$(MASTER_CLUSTER_IP)@;' > $@ < $<
@@ -177,25 +190,45 @@ cert-cleanup:
 	rm -rvf certs/*.token
 	rm -rvf certs/*.groups
 
-# Prepare a kubeconfig for internal system components, e.g. scheduler
-.PRECIOUS: certs/system.%.kubeconfig
-certs/system.%.kubeconfig: template/kubeconfig certs/ca.crt certs/user.%.crt
+
+certs/bootstrap.kubeconfig: template/kubeconfig certs/ca.crt $(NODE_BOOTSTRAP_TOKEN)
 	cp -v $< $@
-	kubectl config set-cluster kubeception \
+	kubectl config set-cluster $(CLUSTER_NAME) \
 		--server="https://kubernetes-kubeception:443" \
 		--certificate-authority=certs/ca.crt \
 		--embed-certs=true \
 		--kubeconfig=$@
-	kubectl config set-credentials system_component \
+	kubectl config set-credentials bootstrap \
+		--token="$(shell cat $(NODE_BOOTSTRAP_TOKEN))" \
+		--kubeconfig=$@
+	
+	kubectl config set-context $(CLUSTER_NAME) \
+		--user=bootstrap \
+		--cluster=$(CLUSTER_NAME) \
+		--kubeconfig=$@
+
+	kubectl config use-context $(CLUSTER_NAME) --kubeconfig=$@
+
+# Prepare a kubeconfig for internal system components, e.g. scheduler
+.PRECIOUS: certs/system.%.kubeconfig
+certs/system.%.kubeconfig: template/kubeconfig certs/ca.crt certs/user.%.crt 
+	cp -v $< $@
+	kubectl config set-cluster $(CLUSTER_NAME) \
+		--server="https://kubernetes-kubeception:443" \
+		--certificate-authority=certs/ca.crt \
+		--embed-certs=true \
+		--kubeconfig=$@
+	kubectl config set-credentials $* \
 		--client-certificate=certs/user.$*.crt \
 		--client-key=certs/user.$*.key \
 		--embed-certs=true \
 		--kubeconfig=$@
-	kubectl config set-context kubeception \
-		--user=system_component \
-		--cluster=kubeception \
+	kubectl config set-context $(CLUSTER_NAME) \
+		--user=$* \
+		--cluster=$(CLUSTER_NAME) \
 		--kubeconfig=$@
-	kubectl config use-context kubeception --kubeconfig=$@
+
+	kubectl config use-context $(CLUSTER_NAME) --kubeconfig=$@
 
 
 
@@ -216,6 +249,7 @@ host-secrets: host-secrets-cleanup  certs
 		--from-file=etcd.key=certs/system.etcdclient.key \
 		--from-file=api.crt=certs/system.apiserver.crt \
 		--from-file=api.key=certs/system.apiserver.key \
+		--from-file=kubelet.crt=certs/user.kubelet.crt \
 		--from-file=controller.pub=certs/user.controller.pub \
 		--from-file=tokens.csv=certs/apiserver_tokens.csv \
 		--from-file=proxy.kubeconfig=certs/system.proxy.kubeconfig
@@ -226,10 +260,12 @@ host-secrets: host-secrets-cleanup  certs
 		--from-file=kubelet.crt=certs/user.kubelet.crt \
 		--from-file=kubelet.key=certs/user.kubelet.key \
 		--from-file=kubelet.kubeconfig=certs/system.kubelet.kubeconfig \
-		--from-file=proxy.kubeconfig=certs/system.proxy.kubeconfig
+		--from-file=proxy.kubeconfig=certs/system.proxy.kubeconfig \
+		--from-file=bootstrap.kubeconfig=certs/bootstrap.kubeconfig
 	# controller needs some special bits for signing tokens.
 	kubectl create secret --namespace $(CLUSTER_NAME) generic controller.kubeception \
 		--from-file=ca.crt=certs/ca.crt \
+		--from-file=ca.key=certs/ca.key \
 		--from-file=controller.key=certs/user.controller.key \
 		--from-file=controller.pub=certs/user.controller.pub \
 		--from-file=controller.crt=certs/user.controller.crt
