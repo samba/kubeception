@@ -29,9 +29,11 @@ proxy () {
     trap killprocs SIGTERM
 
     while :; do
-        kubectl port-forward  -n "$1" svc/kubernetes "$2:443" --pod-running-timeout=1m0s
-        test $? -eq 0 || continue
+        kubectl port-forward  -n "$1" svc/kubernetes "$2:443" --pod-running-timeout=1m0s && break
+        sleep 1
     done
+
+    echo "# proxy port-forward loop has terminated" >&2
 }
 
 
@@ -62,7 +64,7 @@ main () {
 
     # Ensure guest API server is up
     while :; do
-        kubectl cluster-info >/dev/null && break
+        kubectl cluster-info && break  # this passes timely
         sleep ${delay}
     done
 
