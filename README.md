@@ -52,15 +52,9 @@ make down # destroys minikube cluster
 
 ## Known Issues
 
-Nothing is highly available. ~Nothing is secure.~
-
-- [x] ~Certificates: CA _key_ should **not** be stored in k8s.~
-- [x] ~kubelet pods don't register as nodes~
-- [x] ~Deployments can't schedule pods...~ resolved w/ controller manager fix.
-- [x] ~Possible `ClusterRoleBinding` issues preventing sufficient privileges for controller-manager (etc)~  resolved with controller manager's service account token management. 
-- [x] ~Docker w/ kubelet fails to start containers.~
-- [ ] Something in initial spinup of the guest cluster is slow. API server proxy fails, but retry succeeds.
-- [ ] Services within the guest cluster don't resolve deployment names to pods to nodes, correctly... yet. (WIP w/ coredns);
-- [ ] Guest cluster apiserver -> node (kubelet) currently fails because kubelet's TLS certs don't have IP SANs. This blocks service forwarding and log retrieval.
+Moved to [GitHub issues][issues], actually. :)  
+Related [Project Board][project].
 
 
+[project]: https://github.com/samba/kubeception/projects/2
+[issues]: https://github.com/samba/kubeception/issues
