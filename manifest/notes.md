@@ -48,12 +48,14 @@ https://github.com/coreos/coreos-kubernetes/blob/master/Documentation/openssl.md
 https://github.com/mesosphere/kubernetes-keygen
 https://github.com/mesosphere/kubernetes-keygen/blob/master/kube-certgen.sh
 https://github.com/Microsoft/SDN/blob/master/Kubernetes/linux/certs/generate-certs.sh
+https://jenciso.github.io/personal/manage-tls-certificates-for-kubernetes-users
 https://kubernetes.io/docs/concepts/cluster-administration/certificates/#openssl
 https://kubernetes.io/docs/reference/access-authn-authz/authentication/#static-token-file
 https://kubernetes.io/docs/reference/access-authn-authz/rbac/
 https://kubernetes.io/docs/setup/scratch/
 https://kubernetes.io/docs/setup/scratch/#apiserver-controller-manager-and-scheduler
 https://kubernetes.io/docs/setup/scratch/#bootstrapping-the-cluster
+https://kubernetes.io/docs/tasks/tls/managing-tls-in-a-cluster/
 https://security.stackexchange.com/questions/74345/provide-subjectaltname-to-openssl-directly-on-command-line
 https://serverfault.com/questions/899353/how-to-inherit-the-commonname-to-the-subject-alternative-name
 https://www.endpoint.com/blog/2013/10/29/ssl-certificate-sans-and-multi-level
@@ -70,3 +72,8 @@ https://www.ibm.com/support/knowledgecenter/en/SSMNED_5.0.0/com.ibm.apic.install
 
 Example
 https://github.com/kubernetes/kubernetes/blob/v1.8.0/plugin/pkg/auth/authorizer/rbac/bootstrappolicy/testdata/cluster-role-bindings.yaml
+
+
+### Cluster bootstrapping
+
+https://mritd.me/2018/04/19/set-up-kubernetes-1.10.1-cluster-by-hyperkube/ (chinese)
